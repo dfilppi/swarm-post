@@ -63,4 +63,4 @@ To see autoscaling in action:
 
 In a few minutes, the cluster will scale down to it's original size (one worker) due to the scale down policy in the blueprint.
 
-
+To tear down the cluster, run `cfy executions start -d swarm -w uninstall`
