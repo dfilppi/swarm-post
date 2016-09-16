@@ -16,6 +16,12 @@ inputs:
 
 node_templates:
 
+  managers_tier:
+    type: cloudify.nodes.Tier
+
+  workers_tier:
+    type: cloudify.nodes.Tier
+
   manager_host:
     type: cloudify.openstack.nodes.Server
     properties:
@@ -28,6 +34,8 @@ node_templates:
         target: manager_public_ip
       - type: cloudify.openstack.server_connected_to_security_group
         target: swarm_secgroup
+      - type: cloudify.relationships.contained_in
+        target: managers_tier
 
   worker_host:
     type: cloudify.openstack.nodes.Server
@@ -39,6 +47,8 @@ node_templates:
     relationships:
       - type: cloudify.openstack.server_connected_to_security_group
         target: swarm_secgroup
+      - type: cloudify.relationships.contained_in
+        target: managers_tier
     interfaces:
       cloudify.interfaces.monitoring_agent:
           install:
@@ -104,6 +114,7 @@ node_templates:
                 IP: {get_attribute: [worker_host, ip]}
                 MASTERIP: {get_attribute: [manager_host, ip]}
                 TOKEN: {get_attribute: [manager, worker_token]}
+        stop: scripts/stop-worker.sh
     relationships:
       - target: worker_host
         type: cloudify.relationships.contained_in
@@ -111,9 +122,6 @@ node_templates:
         type: cloudify.relationships.connected_to
 
 groups:
-
- swarm_group:
-   members: [manager_host,worker_host]
 
  scale_up_group:
    members: [worker_host]
@@ -160,13 +168,14 @@ groups:
                scale_compute: true
 
  heal_group:
-   members: [swarm_group]
+   members: [worker_host]
    policies:
      simple_autoheal_policy:
        type: cloudify.policies.types.host_failure
        properties:
          service:
-           - .*worker_host.*.cpu.total.system
+           - .*worker_host.*cpu.total.system
+           - .*manager_host.*cpu.total.system
          interval_between_workflows: 60
        triggers:
          auto_heal_trigger:
