@@ -29,6 +29,38 @@ These blueprints were tested on Cloudify 3.4.0.
 
 This will create the Swarm cluster.  The manager node is assigned a public ip.  You can see it by running `cfy local outputs`.
 
-To tear down the structure, run `cfy local execute -w uninstall --task-retries 10`.
+To tear down the cluster, run `cfy local execute -w uninstall --task-retries 10`.
+
+#### swarm-openstack-blueprint.yaml instructions
+
+* Start a Cloudify 3.4.0 [manager](http://docs.getcloudify.org/3.4.0/manager/bootstrapping/).
+* Edit the `inputs/openstack.yaml` file to add image, flavor, and user name (probably ubuntu).
+* run `cfy blueprints upload -b swarm -p swarm-openstack-blueprint.yaml`
+* run `cfy deployments create -b swarm -d swarm -i input/openstack.yaml`
+* run `cfy executions start -d swarm -w install`
+
+This will create the Swarm cluster.  The manager node is assigned a public ip.  You can see it by running `cfy deployments outputs -d swarm`.
+
+To tear down the cluster, run `cfy executions start -d swarm -w uninstall`
+
+#### swarm-scale-blueprint.yaml instructions
+
+* Start a Cloudify 3.4.0 [manager](http://docs.getcloudify.org/3.4.0/manager/bootstrapping/).
+* Edit the `inputs/openstack.yaml` file to add image, flavor, and user name (probably ubuntu).
+* run `cfy blueprints upload -b swarm -p swarm-openstack-blueprint.yaml`
+* run `cfy deployments create -b swarm -d swarm -i input/openstack.yaml`
+* run `cfy executions start -d swarm -w install`
+
+This will create the Swarm cluster.  The manager node is assigned a public ip.  You can see it by running `cfy deployments outputs -d swarm`.
+
+To see autohealing in action, go to the Openstack Horizon dashboard and terminate the worker.  Then go to the Cloudify UI deployments tab.  See the `heal` workflow begin and restore the missing node.
+
+To see autoscaling in action:
+* ssh to the Cloudify manager: `cfy ssh`
+* ssh to the swarm manager: `sudo ssh -i /root/.ssh/agent_key.pem ubuntu@<manager-ip>`
+* run the built in load generator container: `sudo docker service create --constraint 'node.role == worker' --restart-condition none stress /start.sh`
+* Then go to the Cloudify UI deployments tab.  See the `scale` workflow begin and grow the cluster.
+
+In a few minutes, the cluster will scale down to it's original size (one worker) due to the scale down policy in the blueprint.
 
 
